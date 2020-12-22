@@ -1,0 +1,14 @@
+FROM python:slim as BUILD_BASE
+ARG DEBIAN_FRONTEND=noninteractive
+ENV TZ="Asia/Shanghai"
+RUN sed -i 's/deb.debian.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list
+RUN sed -i 's/security.debian.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list
+RUN apt-get update && apt-get install -y aptitude git cmake zsh fish bash-completion zsh-autosuggestions zsh-syntax-highlighting  build-essential clang gdb lldb ssh nano vim zile curl wget libcurl4-gnutls-dev ninja-build libgrpc++-dev libgomp1-dbg protobuf-compiler protobuf-compiler-grpc python-protobuf libyaml-cpp-dev libfmt-dev libjsoncpp-dev libgoogle-glog-dev librdkafka-dev librdkafka++1  && apt-get clean
+
+# copy libs
+COPY --from=opencv/debian:2.4.13 /opencv2/ /usr/
+COPY --from=debian/curlpp:latest /curlpp/ /usr/
+COPY --from=debian/boost:latest /boost/debug/ /usr/
+
+WORKDIR /build/
+ENTRYPOINT [ "/bin/bash", "-l", "-c" ]

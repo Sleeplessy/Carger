@@ -1,0 +1,13 @@
+uploads:
+  destination:
+    - "username" # you can have multiple target hub destination
+    - "username2"
+    # - "harbor.custom.com/foo" you can use custom hub 
+
+# upload path of the project.
+# $BASE is the root dir. example: alpine
+# $STAGE is name after dockerfile, Dockerfile.Runtime -> runtime
+strategy: 
+  default: "$STAGE/$BASE"
+  base_stage: "$STAGE"
+  os_depend: "$BASE/$STAGE"

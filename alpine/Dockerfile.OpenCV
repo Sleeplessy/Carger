@@ -1,0 +1,9 @@
+FROM alpine:latest as BUILD_BASE
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories
+RUN apk --update add gcc build-base git cmake python3-dev py3-pip libffi-dev
+WORKDIR /work/
+# build OpenCV2.4.13
+RUN git clone --branch 2.4.13.7 https://github.com/opencv/opencv.git && cd opencv && mkdir build && cd build && cmake .. -D WITH_TBB=ON -D WITH_OPENMP=ON -D WITH_IPP=ON -D CMAKE_BUILD_TYPE=RELEASE -D BUILD_EXAMPLES=OFF -D WITH_NVCUVID=ON -D WITH_CUDA=ON -D BUILD_DOCS=OFF -D BUILD_PERF_TESTS=OFF -D BUILD_TESTS=OFF -D WITH_CSTRIPES=ON -D WITH_OPENCL=ON && make -j && make DESTDIR=/out/ install
+
+FROM scratch as FIN
+COPY --from=BUILD_BASE /out/usr/local /opencv2

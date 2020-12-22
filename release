@@ -1,0 +1,127 @@
+#!/usr/bin/ruby -w
+# -*- coding: utf-8 -*-
+require 'yaml'
+require 'ostruct'
+require 'optparse'
+
+Dir[File.join(__dir__, ".modules", "*.rb")].each{ |_module| require _module and puts "Loaded module " + _module}
+
+def tag_docker(basename, upload_dist)
+  res = []
+  cmd_template = "docker tag %s %s"
+  upload_dist.each{
+    |dist|
+    remote = "%s/%s" % [dist, basename]
+    cmd = cmd_template % [basename, remote]
+    puts "Execute command {%s}" % cmd
+    if system(cmd)
+      puts "#{colorize("Successfully tagged " + remote, "green")}"
+      res << remote
+    else
+      puts "#{colorize("Error while tagging " + remote, "red")}"
+    end
+  }
+  return res
+end
+
+def build_docker(dir, name, base, strategy, upload_dist)
+  images = []
+  dockerfile = File.join(dir,"Dockerfile.%s" % name)
+  strategy.gsub!('$BASE', base)
+  strategy.gsub!('$STAGE', name.downcase)
+  puts "#{colorize("Budiling %s...strategy: %s, Dockerfile: %s" % [name, strategy, dockerfile], "green")}"
+  build_cmd = "docker build -t %s -f %s %s" % [strategy, dockerfile, dir]
+  puts build_cmd
+  if system(build_cmd)
+    images += tag_docker(strategy, upload_dist)
+  else
+    puts "#{colorize("Error while build image " +  strategy, "red")}"
+  end
+  return images
+end
+
+
+def produce(dir, strategy_conf, upload_dist)
+  detail_path = File.join(dir, "detail.yaml")
+  base = File.basename(dir)
+  images = []
+  if File.file?(detail_path)
+    puts "producing images in %s" % dir
+    begin
+      detail = YAML.load_file(detail_path)
+      detail["produce"].each {
+        |item|
+        name = ""
+        image_version = "latest"
+        case item
+        when Hash
+          #strategy = strategy_conf["default"].dup
+          item.collect { |_name, configs|
+            image_version = configs["version"] if configs.key?("version")
+            name = _name
+            if configs.key?("strategy")
+              strategy = strategy_conf[configs["strategy"]].dup
+            else
+              strategy = strategy_conf["default"].dup
+            end
+            case image_version
+            when String
+              images += build_docker(dir, name, base, "%s:%s" % [strategy_conf[configs["strategy"]], image_version], upload_dist)
+            else
+              image_version.each{
+                |ver|
+                puts "base:%s, ver:%s" % [strategy, ver]
+                images += build_docker(dir, name, base, "%s:%s" % [strategy, ver], upload_dist)
+              }
+            end
+          }
+        else
+          strategy = 
+          name = item
+          images += build_docker(dir, name, base, "%s:%s" % [strategy_conf["default"], image_version], upload_dist)
+        end
+        
+        
+      }
+      return images
+    rescue StandardError => msg
+      puts "%s may contains error:%s" % [detail_path, msg]
+    end
+  end
+end
+
+# parse command line option
+options = OpenStruct.new
+options.push = false
+OptionParser.new do |opts|
+  opts.banner = "Usage: relase [-p]"
+  opts.on('-p', '--push', 'whether to push or not') { |v| options[:push] = v.nil? ? false: true }
+end.parse!
+
+puts options.inspect
+
+configs = YAML.load_file(File.join(__dir__, "config.yaml"))
+version = YAML.load_file(File.join(__dir__, "project.yaml"))
+puts configs.inspect
+puts "%s:%s" % [version["project"]["name"],version["project"]["version"]]
+strategy = configs["strategy"]
+puts strategy.inspect
+distro = []
+Dir.entries(__dir__).select {|entry| File.directory? entry and !(entry =='.' || entry == '..' || entry.start_with?('.')) and distro.push entry}
+puts "Distro contans:%s" % distro.inspect
+images = []
+distro.each { |dir_name|
+  work_dir = File.join(__dir__, dir_name)
+  images += produce(work_dir, strategy, configs["uploads"]["destination"])
+}
+
+images.each { |image|
+  cmd = 'docker push %s' % image
+  puts "Execute command {%s}" % cmd
+  if system(cmd)
+    puts "#{colorize("pushed  " + image, "green")}"
+  else
+    puts "#{colorize("Error while push " + image, "red")}"
+  end
+} if options.push
+

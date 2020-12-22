@@ -1,0 +1,16 @@
+FROM python:slim  as RUNTIME_BASE
+ARG DEBIAN_FRONTEND=noninteractive
+ENV TZ="Asia/Shanghai"
+RUN sed -i 's/deb.debian.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list
+RUN sed -i 's/security.debian.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list
+RUN apt-get update && apt-get install -y ssh nano vim zile libgrpc++1 libcurl4 libcurl3-gnutls libgomp1 libyaml-cpp0.6 libfmt-dev libjsoncpp1 libgoogle-glog0v5 librdkafka++1 && apt-get clean
+
+# copy libs
+COPY --from=opencv/debian:2.4.13 /opencv2/lib/ /usr/lib/
+COPY --from=opencv/debian:2.4.13 /opencv2/share/ /usr/share/
+COPY --from=debian/boost:latest /boost/release/lib/ /usr/lib/
+COPY --from=debian/curlpp:latest /curlpp/ /usr/
+
+
+WORKDIR /app/
+ENTRYPOINT [ "/bin/bash", "-l", "-c" ]

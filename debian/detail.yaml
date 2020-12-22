@@ -1,0 +1,28 @@
+produce:
+  - CURLpp:
+      strategy: os_depend
+      version: "latest"
+  - MiniRuntime:
+      version:
+        - "0.1.0"
+        - "latest"
+  - OpenCV:
+      version:
+        - "2.4.13"
+        - "2.4"
+        - "2"
+  - Boost:
+      strategy: os_depend
+      version:
+        - "1.74.0"
+        - "1.74"
+        - "latest"
+      
+  - Build:
+      version:
+        - "0.1.0"
+        - "latest"
+  - Runtime:
+      version:
+        - "0.1.0"
+        - "latest"

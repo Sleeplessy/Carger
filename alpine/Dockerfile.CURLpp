@@ -1,0 +1,10 @@
+FROM alpine:latest as BUILD_BASE
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories
+RUN apk --update add gcc build-base git cmake curl-dev
+WORKDIR /work/
+# build OpenCV2.4.13
+RUN git clone https://github.com/jpbarrette/curlpp.git && cd curlpp && mkdir build && cd build && cmake ..  && make -j && make DESTDIR=/out/ install
+RUN mv /out/usr/local/lib64 /out/usr/local/lib
+
+FROM scratch as FIN
+COPY --from=BUILD_BASE /out/usr/local /curlpp

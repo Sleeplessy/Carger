@@ -1,0 +1,7 @@
+# Minimal Runtime only contains minimal libs without boost
+FROM alpine:latest as RUNTIME_BASE
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories
+RUN apk --update --no-cache add  libstdc++ openssh jsoncpp yaml-cpp fmt spdlog libcurl
+# Setting timezone
+RUN apk add tzdata --no-cache && cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && echo "Asia/Shanghai" > /etc/timezone && apk del tzdata
+COPY --from=alpine/curlpp:latest /curlpp/ /usr/

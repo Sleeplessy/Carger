@@ -1,0 +1,10 @@
+FROM alpine:latest as RUNTIME_BASE
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories
+RUN apk --update --no-cache add  libstdc++ openssh librdkafka libffi boost jsoncpp yaml-cpp grpc protobuf fmt spdlog libcurl libgomp python3 py3-pip
+RUN apk --update  --no-cache add glog --repository=http://mirrors.tuna.tsinghua.edu.cn/alpine/edge/testing
+# Setting timezone
+RUN apk add tzdata --no-cache && cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && echo "Asia/Shanghai" > /etc/timezone && apk del tzdata
+# copy opencv2 libs
+COPY --from=alpine/opencv:2.4.13 /opencv2/lib/ /usr/lib/
+COPY --from=alpine/opencv:2.4.13 /opencv2/share/ /usr/share/
+COPY --from=alpine/curlpp:latest /curlpp/ /usr/

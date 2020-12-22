@@ -1,0 +1,13 @@
+FROM python:slim as BUILD_BASE
+ARG DEBIAN_FRONTEND=noninteractive
+ENV TZ="Asia/Shanghai"
+RUN sed -i 's/deb.debian.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list
+RUN sed -i 's/security.debian.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list
+RUN apt-get update && apt-get install -y wget build-essential
+WORKDIR /build/
+RUN mkdir -p /boost/{debug,release}
+RUN wget -nv "https://dl.bintray.com/boostorg/release/1.74.0/source/boost_1_74_0.tar.gz"  && tar -xf boost_1_74_0.tar.gz
+RUN cd boost_1_74_0 && ./bootstrap.sh && ./b2 -j $(nproc) --prefix=/boost/debug variant=debug install  && ./b2 -j $(nproc) --prefix=/boost/release variant=release link=shared install
+
+FROM scratch as FIN
+COPY --from=BUILD_BASE /boost /boost
